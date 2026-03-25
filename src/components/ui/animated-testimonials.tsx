@@ -1,16 +1,15 @@
 "use client";
 
 import { IconArrowLeft, IconArrowRight } from "@tabler/icons-react";
-import { AnimatePresence, motion } from "framer-motion";
-import Image from "next/image";
-import { useCallback, useEffect, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+
+import { useEffect, useMemo, useState } from "react";
 
 type Testimonial = {
   quote: string;
   name: string;
   designation: string;
   src: string;
-  companyLogo?: string;
 };
 export const AnimatedTestimonials = ({
   testimonials,
@@ -20,10 +19,16 @@ export const AnimatedTestimonials = ({
   autoplay?: boolean;
 }) => {
   const [active, setActive] = useState(0);
+  // Add a 'mounted' state to prevent hydration mismatch
+  const [mounted, setMounted] = useState(false);
 
-  const handleNext = useCallback(() => {
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const handleNext = () => {
     setActive((prev) => (prev + 1) % testimonials.length);
-  }, [testimonials.length]);
+  };
 
   const handlePrev = () => {
     setActive((prev) => (prev - 1 + testimonials.length) % testimonials.length);
@@ -40,12 +45,17 @@ export const AnimatedTestimonials = ({
     }
   }, [autoplay, handleNext]);
 
-  const getRotation = (index: number) => {
-    // Deterministic rotation based on index to avoid hydration mismatch
-    const rotations = [-10, -5, 0, 5, 10, -8, 8, -3, 3, -7];
-    return rotations[index % rotations.length];
+  const randomRotateY = () => {
+    return Math.floor(Math.random() * 21) - 10;
   };
 
+  // Move random logic into a memoized stable array
+  // or only call it if mounted
+  const randomRotations = useMemo(
+    () => testimonials.map(() => Math.floor(Math.random() * 21) - 10),
+    [testimonials.map],
+  );
+  if (!mounted) return null;
   return (
     <div className="mx-auto max-w-sm px-4 py-20 font-sans antialiased md:max-w-4xl md:px-8 lg:px-12">
       <div className="relative grid grid-cols-1 gap-20 md:grid-cols-2">
@@ -59,13 +69,13 @@ export const AnimatedTestimonials = ({
                     opacity: 0,
                     scale: 0.9,
                     z: -100,
-                    rotate: getRotation(index),
+                    rotate: randomRotateY(),
                   }}
                   animate={{
                     opacity: isActive(index) ? 1 : 0.7,
                     scale: isActive(index) ? 1 : 0.95,
                     z: isActive(index) ? 0 : -100,
-                    rotate: isActive(index) ? 0 : getRotation(index),
+                    rotate: isActive(index) ? 0 : randomRotations[index],
                     zIndex: isActive(index)
                       ? 40
                       : testimonials.length + 2 - index,
@@ -75,7 +85,7 @@ export const AnimatedTestimonials = ({
                     opacity: 0,
                     scale: 0.9,
                     z: 100,
-                    rotate: getRotation(index + 1),
+                    rotate: randomRotateY(),
                   }}
                   transition={{
                     duration: 0.4,
@@ -83,7 +93,7 @@ export const AnimatedTestimonials = ({
                   }}
                   className="absolute inset-0 origin-bottom"
                 >
-                  <Image
+                  <img
                     src={testimonial.src}
                     alt={testimonial.name}
                     width={500}
@@ -116,27 +126,16 @@ export const AnimatedTestimonials = ({
               ease: "easeInOut",
             }}
           >
-            <div className="flex items-center gap-3 mb-2">
-              <h3 className="text-2xl font-bold text-black dark:text-white">
-                {testimonials[active].name}
-              </h3>
-              {testimonials[active].companyLogo && (
-                <Image
-                  src={testimonials[active].companyLogo}
-                  alt="Company logo"
-                  width={32}
-                  height={32}
-                  className="rounded object-contain"
-                />
-              )}
-            </div>
+            <h3 className="text-2xl font-bold text-black dark:text-white">
+              {testimonials[active].name}
+            </h3>
             <p className="text-sm text-gray-500 dark:text-neutral-500">
               {testimonials[active].designation}
             </p>
             <motion.p className="mt-8 text-lg text-gray-500 dark:text-neutral-300">
               {testimonials[active].quote.split(" ").map((word, index) => (
                 <motion.span
-                  key={`${active}-word-${index}-${word}`}
+                  key={index}
                   initial={{
                     filter: "blur(10px)",
                     opacity: 0,
@@ -161,18 +160,14 @@ export const AnimatedTestimonials = ({
           </motion.div>
           <div className="flex gap-4 pt-12 md:pt-0">
             <button
-              type="button"
               onClick={handlePrev}
               className="group/button flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 dark:bg-neutral-800"
-              aria-label="Previous testimonial"
             >
               <IconArrowLeft className="h-5 w-5 text-black transition-transform duration-300 group-hover/button:rotate-12 dark:text-neutral-400" />
             </button>
             <button
-              type="button"
               onClick={handleNext}
               className="group/button flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 dark:bg-neutral-800"
-              aria-label="Next testimonial"
             >
               <IconArrowRight className="h-5 w-5 text-black transition-transform duration-300 group-hover/button:-rotate-12 dark:text-neutral-400" />
             </button>

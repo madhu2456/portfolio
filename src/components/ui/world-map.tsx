@@ -2,9 +2,8 @@
 
 import DottedMap from "dotted-map";
 import { motion } from "motion/react";
-import Image from "next/image";
 import { useTheme } from "next-themes";
-import { useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 interface MapProps {
   dots?: Array<{
@@ -19,23 +18,40 @@ export default function WorldMap({
   lineColor = "#0ea5e9",
 }: MapProps) {
   const svgRef = useRef<SVGSVGElement>(null);
-  const map = new DottedMap({ height: 100, grid: "diagonal" });
 
-  const { theme } = useTheme();
+  // ✅ Hydration fix
+  const [mounted, setMounted] = useState(false);
+  const { resolvedTheme } = useTheme();
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // ✅ Memoize map (performance)
+  const map = useMemo(
+    () => new DottedMap({ height: 100, grid: "diagonal" }),
+    [],
+  );
+
+  // ⛔ Prevent SSR mismatch
+  if (!mounted) return null;
+
+  // ✅ Generate SVG after mount
   const svgMap = map.getSVG({
     radius: 0.22,
-    color: theme === "dark" ? "#FFFFFF40" : "#00000040",
+    color: resolvedTheme === "dark" ? "#FFFFFF40" : "#00000040",
     shape: "circle",
-    backgroundColor: "transparent",
+    backgroundColor: resolvedTheme === "dark" ? "black" : "white",
   });
 
+  // 🌍 Convert lat/lng → SVG coords
   const projectPoint = (lat: number, lng: number) => {
     const x = (lng + 180) * (800 / 360);
     const y = (90 - lat) * (400 / 180);
     return { x, y };
   };
 
+  // ✨ Curved connection line
   const createCurvedPath = (
     start: { x: number; y: number },
     end: { x: number; y: number },
@@ -45,57 +61,39 @@ export default function WorldMap({
     return `M ${start.x} ${start.y} Q ${midX} ${midY} ${end.x} ${end.y}`;
   };
 
-  // Create unique identifiers for dots to avoid index-based keys
-  const dotsWithIds = dots.map((dot, i) => ({
-    ...dot,
-    id: `dot-${dot.start.lat}-${dot.start.lng}-${dot.end.lat}-${dot.end.lng}-${i}`,
-  }));
-
   return (
-    <div className="w-full aspect-[2/1] rounded-lg relative font-sans">
-      <Image
+    <div className="w-full aspect-[2/1] dark:bg-black bg-white rounded-lg relative font-sans overflow-hidden">
+      {/* 🌍 Background dotted map */}
+      <img
         src={`data:image/svg+xml;utf8,${encodeURIComponent(svgMap)}`}
-        className="h-full w-full [mask-image:linear-gradient(to_bottom,transparent,white_10%,white_90%,transparent)] pointer-events-none select-none"
-        alt="world map showing global connectivity"
-        height={495}
-        width={1056}
+        className="h-full w-full pointer-events-none select-none [mask-image:linear-gradient(to_bottom,transparent,white_10%,white_90%,transparent)]"
+        alt="world map"
         draggable={false}
       />
+
+      {/* ✈️ Animated paths */}
       <svg
         ref={svgRef}
         viewBox="0 0 800 400"
         className="w-full h-full absolute inset-0 pointer-events-none select-none"
-        aria-label="Interactive world map with connection paths"
       >
-        <title>World Map Connections</title>
-        {dotsWithIds.map((dot) => {
+        {/* Paths */}
+        {dots.map((dot, i) => {
           const startPoint = projectPoint(dot.start.lat, dot.start.lng);
           const endPoint = projectPoint(dot.end.lat, dot.end.lng);
-          const dotIndex = dots.indexOf(
-            dots.find(
-              (d) =>
-                d.start.lat === dot.start.lat &&
-                d.start.lng === dot.start.lng &&
-                d.end.lat === dot.end.lat &&
-                d.end.lng === dot.end.lng,
-            ) as (typeof dots)[0],
-          );
+
           return (
-            <g key={`path-group-${dot.id}`}>
+            <g key={`path-group-${i}`}>
               <motion.path
                 d={createCurvedPath(startPoint, endPoint)}
                 fill="none"
                 stroke="url(#path-gradient)"
-                strokeWidth="1"
-                initial={{
-                  pathLength: 0,
-                }}
-                animate={{
-                  pathLength: 1,
-                }}
+                strokeWidth="1.5"
+                initial={{ pathLength: 0 }}
+                animate={{ pathLength: 1 }}
                 transition={{
-                  duration: 1,
-                  delay: 0.5 * dotIndex,
+                  duration: 1.2,
+                  delay: 0.4 * i,
                   ease: "easeOut",
                 }}
               />
@@ -103,6 +101,7 @@ export default function WorldMap({
           );
         })}
 
+        {/* Gradient */}
         <defs>
           <linearGradient id="path-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="white" stopOpacity="0" />
@@ -112,74 +111,72 @@ export default function WorldMap({
           </linearGradient>
         </defs>
 
-        {dotsWithIds.map((dot) => (
-          <g key={`points-group-${dot.id}`}>
-            <g key={`start-${dot.id}`}>
-              <circle
-                cx={projectPoint(dot.start.lat, dot.start.lng).x}
-                cy={projectPoint(dot.start.lat, dot.start.lng).y}
-                r="2"
-                fill={lineColor}
-              />
-              <circle
-                cx={projectPoint(dot.start.lat, dot.start.lng).x}
-                cy={projectPoint(dot.start.lat, dot.start.lng).y}
-                r="2"
-                fill={lineColor}
-                opacity="0.5"
-              >
-                <animate
-                  attributeName="r"
-                  from="2"
-                  to="8"
-                  dur="1.5s"
-                  begin="0s"
-                  repeatCount="indefinite"
-                />
-                <animate
-                  attributeName="opacity"
-                  from="0.5"
-                  to="0"
-                  dur="1.5s"
-                  begin="0s"
-                  repeatCount="indefinite"
-                />
-              </circle>
+        {/* Points */}
+        {dots.map((dot) => {
+          const start = projectPoint(dot.start.lat, dot.start.lng);
+          const end = projectPoint(dot.end.lat, dot.end.lng);
+
+          // Create a unique key based on coordinates
+          const pathKey = `path-${dot.start.lat}-${dot.start.lng}-${dot.end.lat}-${dot.end.lng}`;
+
+          return (
+            <g key={pathKey}>
+              {/* Start */}
+              <g>
+                <circle cx={start.x} cy={start.y} r="2" fill={lineColor} />
+                <circle
+                  cx={start.x}
+                  cy={start.y}
+                  r="2"
+                  fill={lineColor}
+                  opacity="0.5"
+                >
+                  <animate
+                    attributeName="r"
+                    from="2"
+                    to="8"
+                    dur="1.5s"
+                    repeatCount="indefinite"
+                  />
+                  <animate
+                    attributeName="opacity"
+                    from="0.5"
+                    to="0"
+                    dur="1.5s"
+                    repeatCount="indefinite"
+                  />
+                </circle>
+              </g>
+
+              {/* End */}
+              <g>
+                <circle cx={end.x} cy={end.y} r="2" fill={lineColor} />
+                <circle
+                  cx={end.x}
+                  cy={end.y}
+                  r="2"
+                  fill={lineColor}
+                  opacity="0.5"
+                >
+                  <animate
+                    attributeName="r"
+                    from="2"
+                    to="8"
+                    dur="1.5s"
+                    repeatCount="indefinite"
+                  />
+                  <animate
+                    attributeName="opacity"
+                    from="0.5"
+                    to="0"
+                    dur="1.5s"
+                    repeatCount="indefinite"
+                  />
+                </circle>
+              </g>
             </g>
-            <g key={`end-${dot.id}`}>
-              <circle
-                cx={projectPoint(dot.end.lat, dot.end.lng).x}
-                cy={projectPoint(dot.end.lat, dot.end.lng).y}
-                r="2"
-                fill={lineColor}
-              />
-              <circle
-                cx={projectPoint(dot.end.lat, dot.end.lng).x}
-                cy={projectPoint(dot.end.lat, dot.end.lng).y}
-                r="2"
-                fill={lineColor}
-                opacity="0.5"
-              >
-                <animate
-                  attributeName="r"
-                  from="2"
-                  to="8"
-                  dur="1.5s"
-                  begin="0s"
-                  repeatCount="indefinite"
-                />
-                <animate
-                  attributeName="opacity"
-                  from="0.5"
-                  to="0"
-                  dur="1.5s"
-                  begin="0s"
-                  repeatCount="indefinite"
-                />
-              </circle>
-            </g>
-          </g>
-        ))}
+          );
+        })}
       </svg>
     </div>
   );
