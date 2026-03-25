@@ -5,7 +5,7 @@ export { AboutSection } from "./AboutSection";
 // export { ContactForm } from "./ContactForm";
 // export { ContactSection } from "./ContactSection";
 // export { EducationSection } from "./EducationSection";
-// export { ExperienceSection } from "./ExperienceSection";
+export { ExperienceSection } from "./ExperienceSection";
 export { HeroSection } from "./HeroSection";
 // export { ProjectsSection } from "./ProjectsSection";
 // export { ServicesSection } from "./ServicesSection";

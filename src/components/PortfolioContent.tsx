@@ -1,5 +1,6 @@
 import {
   AboutSection,
+  ExperienceSection,
   HeroSection,
   SkillsSection,
   TestimonialsSection,
@@ -12,7 +13,7 @@ async function PortfolioContent() {
       <AboutSection />
       <TestimonialsSection />
       <SkillsSection />
-      {/*<ExperienceSection />*/}
+      <ExperienceSection />
       {/*<EducationSection />*/}
       {/*<ProjectsSection />*/}
       {/*<CertificationsSection />*/}d{/*<AchievementsSection />*/}
