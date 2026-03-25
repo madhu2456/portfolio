@@ -1,19 +1,18 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { submitContactForm } from "@/app/actions/submit-contact-form";
+import { useRef, useState, useTransition } from "react"; // 1. Added useRef
+import { submitContactForm } from "@/actions/submit-contact-form";
 
 export function ContactForm() {
   const [isPending, startTransition] = useTransition();
+  const formRef = useRef<HTMLFormElement>(null); // 2. Create a ref for the form
   const [status, setStatus] = useState<{
     type: "success" | "error" | null;
     message: string;
   }>({ type: null, message: "" });
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.target as HTMLFormElement);
-
+  // 3. Changed argument from Event to FormData
+  const handleAction = async (formData: FormData) => {
     startTransition(async () => {
       const result = await submitContactForm(formData);
 
@@ -22,9 +21,10 @@ export function ContactForm() {
           type: "success",
           message: "Thank you! Your message has been sent successfully.",
         });
-        // Reset the form
-        (e.target as HTMLFormElement).reset();
-        // Clear success message after 5 seconds
+
+        // 4. Use the ref to reset the form
+        formRef.current?.reset();
+
         setTimeout(() => {
           setStatus({ type: null, message: "" });
         }, 5000);
@@ -55,7 +55,12 @@ export function ContactForm() {
         </div>
       )}
 
-      <form className="space-y-3 @md/form:space-y-4" onSubmit={handleSubmit}>
+      {/* 5. Switch onSubmit to action and attach the ref */}
+      <form
+        className="space-y-3 @md/form:space-y-4"
+        action={handleAction}
+        ref={formRef}
+      >
         <div>
           <label
             htmlFor="name"
@@ -73,6 +78,8 @@ export function ContactForm() {
             disabled={isPending}
           />
         </div>
+
+        {/* ... email, subject, message inputs stay exactly the same ... */}
 
         <div>
           <label
@@ -122,7 +129,7 @@ export function ContactForm() {
             name="message"
             rows={5}
             className="w-full px-3 py-1.5 @md/form:px-4 @md/form:py-2 rounded-lg border bg-background focus:outline-none focus:ring-2 focus:ring-primary resize-none text-sm @md/form:text-base"
-            placeholder="Tell me about your project..."
+            placeholder="How may I help you?"
             required
             disabled={isPending}
           />

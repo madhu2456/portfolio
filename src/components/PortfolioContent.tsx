@@ -3,7 +3,7 @@ import {
   AchievementsSection,
   BlogSection,
   CertificationsSection,
-  // ContactSection,
+  ContactSection,
   EducationSection,
   ExperienceSection,
   HeroSection,
@@ -27,7 +27,7 @@ async function PortfolioContent() {
       <AchievementsSection />
       <ServicesSection />
       <BlogSection />
-      {/*<ContactSection />*/}
+      <ContactSection />
     </>
   );
 }
