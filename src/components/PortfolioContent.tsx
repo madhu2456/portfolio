@@ -1,10 +1,10 @@
-import { HeroSection } from "@/components/sections/HeroSection";
+import { AboutSection, HeroSection } from "@/components/sections/";
 
 async function PortfolioContent() {
   return (
     <>
       <HeroSection />
-      {/*<AboutSection />*/}
+      <AboutSection />
       {/*<TestimonialsSection />*/}
       {/*<SkillsSection />*/}
       {/*<ExperienceSection />*/}
