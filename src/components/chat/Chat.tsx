@@ -2,10 +2,10 @@
 
 import { ChatKit, useChatKit } from "@openai/chatkit-react";
 import { createSession } from "@/actions/create-session";
-import type { CHAT_PROFILE_QUERYResult } from "../../../sanity.types";
+import type { CHAT_PROFILE_QUERY_RESULT } from "../../../sanity.types";
 import { useSidebar } from "../ui/sidebar";
 
-const Chat = ({ profile }: { profile: CHAT_PROFILE_QUERYResult | null }) => {
+const Chat = ({ profile }: { profile: CHAT_PROFILE_QUERY_RESULT | null }) => {
   const { toggleSidebar } = useSidebar();
   const getGreeting = () => {
     if (!profile?.firstName) {
